@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Box Label Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #111827; color: white; overscroll-behavior: none; }
+        .view-hidden { display: none !important; }
+        .tap-animate:active { transform: scale(0.95); filter: brightness(0.8); }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col font-sans select-none">
+
+    <!-- SEARCH & INFO HEADER -->
+    <div class="bg-gray-900 p-4 border-b border-gray-800 shadow-md">
+        <div class="flex gap-4">
+            <input type="text" id="search-input" placeholder="Scan or Type Teesom Order #" class="flex-1 bg-black border border-gray-700 rounded-xl p-4 text-xl text-white outline-none focus:border-blue-500">
+            <button onclick="searchOrder()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 rounded-xl text-xl tap-animate" id="search-btn">Lookup</button>
+            <button onclick="document.getElementById('settings-modal').classList.remove('view-hidden')" class="bg-gray-800 px-4 rounded-xl text-2xl border border-gray-700 tap-animate">⚙️</button>
+        </div>
+        
+        <!-- Order Info Display -->
+        <div id="order-info" class="mt-4 p-4 bg-gray-800 rounded-xl border border-gray-700 view-hidden">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="text-gray-400 text-xs font-bold uppercase tracking-widest">Order Number</p>
+                    <p id="display-order" class="text-3xl font-black text-white"></p>
+                </div>
+                <div class="text-right w-1/2">
+                    <p class="text-gray-400 text-xs font-bold uppercase tracking-widest">Description</p>
+                    <p id="display-desc" class="text-xl font-bold text-gray-200 truncate"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN LABEL BUILDER -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Side: Size Selector -->
+        <div class="w-1/3 border-r border-gray-800 flex flex-col bg-gray-900/50">
+            <div class="p-4 border-b border-gray-800 bg-gray-900">
+                <h3 class="text-gray-400 font-bold uppercase tracking-wider text-sm">Add Sizes to Box</h3>
+            </div>
+            <div class="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
+                <!-- Size Buttons -->
+                <script>
+                    const sizes = [
+                        "Baby/Infant", "Toddler", "Youth XS", "Youth S", "Youth M", "Youth L", "Youth XL",
+                        "O/S", "Adult XS", "Adult S", "Adult M", "Adult L", "Adult XL",
+                        "2XL", "3XL", "4XL", "5XL", "6XL", "7XL", "8XL", "9XL", "10XL"
+                    ];
+                    sizes.forEach(size => {
+                        document.write(`<button onclick="addSizeRow('${size}')" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-left p-4 rounded-lg font-bold text-lg text-gray-200 tap-animate">+ ${size}</button>`);
+                    });
+                </script>
+            </div>
+        </div>
+
+        <!-- Right Side: Box Contents -->
+        <div class="flex-1 flex flex-col bg-black relative">
+            <div class="p-4 border-b border-gray-800 flex justify-between items-center">
+                <h3 class="text-gray-400 font-bold uppercase tracking-wider text-sm">Current Box Contents</h3>
+                <button onclick="clearBox()" class="text-red-400 text-sm font-bold border border-red-900/50 bg-red-900/20 px-3 py-1 rounded">Clear All</button>
+            </div>
+            
+            <!-- Dynamic Size Rows Go Here -->
+            <div id="box-contents" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                <p id="empty-msg" class="text-gray-600 text-center mt-10 font-bold">Tap a size on the left to add it to this box.</p>
+            </div>
+
+            <!-- Print Button Area -->
+            <div class="p-4 bg-gray-900 border-t border-gray-800 flex gap-4 items-end">
+                <div class="flex gap-2">
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 font-bold mb-1">Box #</label>
+                        <input type="number" id="box-num" value="1" class="w-20 bg-black border border-gray-700 rounded-lg p-3 text-white text-center font-bold outline-none">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-xs text-gray-500 font-bold mb-1">Of Total</label>
+                        <input type="number" id="box-total" value="1" class="w-20 bg-black border border-gray-700 rounded-lg p-3 text-white text-center font-bold outline-none">
+                    </div>
+                </div>
+                <button onclick="generateAndPrint()" id="print-btn" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-black text-2xl py-4 rounded-xl shadow-[0_5px_0_rgb(21,128,61)] tap-animate active:translate-y-[5px] active:shadow-none transition-all disabled:opacity-50">
+                    PRINT ZEBRA LABEL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="absolute inset-0 bg-black/90 z-50 flex items-center justify-center view-hidden p-6">
+        <div class="bg-gray-900 border border-gray-700 p-8 rounded-2xl w-full max-w-2xl flex flex-col gap-6">
+            <h2 class="text-2xl font-black text-white">App Settings</h2>
+            <div class="flex flex-col gap-2">
+                <label class="text-sm font-semibold text-gray-400">Google Apps Script URL</label>
+                <input type="text" id="webhook-url" placeholder="https://script.google.com/macros/s/..." class="w-full bg-black border border-gray-700 rounded-xl p-4 text-white focus:border-blue-500 outline-none">
+            </div>
+            <button onclick="document.getElementById('settings-modal').classList.add('view-hidden')" class="bg-blue-600 text-white font-bold py-4 rounded-xl text-xl mt-4">Save & Close</button>
+        </div>
+    </div>
+
+    <script>
+        let boxItems = {};
+        const webhookInput = document.getElementById('webhook-url');
+        
+        // Load Settings
+        if (localStorage.getItem('webhook-url')) { webhookInput.value = localStorage.getItem('webhook-url'); }
+        webhookInput.addEventListener('input', (e) => { localStorage.setItem('webhook-url', e.target.value); });
+
+        // --- Step 1: Searching the Sheet ---
+        async function searchOrder() {
+            const searchVal = document.getElementById('search-input').value;
+            const btn = document.getElementById('search-btn');
+            const url = webhookInput.value;
+            
+            if (!searchVal || !url) return alert("Enter an order number and ensure Webhook is saved in settings.");
+            
+            btn.innerText = "Searching...";
+            btn.disabled = true;
+
+            try {
+                // We use GET to pull data from the script
+                const response = await fetch(`${url}?orderId=${encodeURIComponent(searchVal)}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('display-order').innerText = data.orderNum;
+                    document.getElementById('display-desc').innerText = data.desc;
+                    document.getElementById('order-info').classList.remove('view-hidden');
+                } else {
+                    alert("Order not found in Rawdata tab.");
+                    document.getElementById('order-info').classList.add('view-hidden');
+                }
+            } catch (err) {
+                alert("Search failed. Check internet or Webhook URL.");
+            }
+            
+            btn.innerText = "Lookup";
+            btn.disabled = false;
+        }
+
+        // --- Step 2: Building the Box ---
+        function addSizeRow(size) {
+            document.getElementById('empty-msg').style.display = 'none';
+            if (!boxItems[size]) boxItems[size] = 0;
+            renderBox();
+        }
+
+        function updateQty(size, amount) {
+            boxItems[size] += amount;
+            if (boxItems[size] < 0) boxItems[size] = 0;
+            renderBox();
+        }
+
+        function removeSize(size) {
+            delete boxItems[size];
+            renderBox();
+            if (Object.keys(boxItems).length === 0) document.getElementById('empty-msg').style.display = 'block';
+        }
+
+        function clearBox() {
+            boxItems = {};
+            renderBox();
+            document.getElementById('empty-msg').style.display = 'block';
+        }
+
+        function renderBox() {
+            const container = document.getElementById('box-contents');
+            // Clear existing rows (except the empty message)
+            container.innerHTML = '<p id="empty-msg" class="text-gray-600 text-center mt-10 font-bold hidden">Tap a size on the left to add it to this box.</p>';
+            
+            for (const [size, qty] of Object.entries(boxItems)) {
+                const row = document.createElement('div');
+                row.className = "flex flex-col sm:flex-row items-center justify-between bg-gray-800 p-3 rounded-xl border border-gray-700 gap-4";
+                
+                row.innerHTML = `
+                    <div class="flex items-center gap-4 min-w-[200px]">
+                        <button onclick="removeSize('${size}')" class="text-red-500 font-black text-xl px-2 hover:bg-red-900/30 rounded">X</button>
+                        <span class="text-2xl font-black text-white w-32">${size}</span>
+                        <span class="text-3xl font-black text-blue-400 w-16 text-right">${qty}</span>
+                    </div>
+                    
+                    <div class="flex gap-2 flex-1 w-full sm:w-auto">
+                        <button onclick="updateQty('${size}', 1)" class="tap-animate flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 rounded-lg text-lg">+1</button>
+                        <button onclick="updateQty('${size}', 5)" class="tap-animate flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 rounded-lg text-lg">+5</button>
+                        <button onclick="updateQty('${size}', 18)" class="tap-animate flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 rounded-lg text-lg">+18</button>
+                        <button onclick="updateQty('${size}', 48)" class="tap-animate flex-1 bg-blue-900/50 hover:bg-blue-800 text-blue-200 font-bold py-4 rounded-lg text-lg">+48</button>
+                        <button onclick="updateQty('${size}', 72)" class="tap-animate flex-1 bg-blue-900/50 hover:bg-blue-800 text-blue-200 font-bold py-4 rounded-lg text-lg">+72</button>
+                    </div>
+                `;
+                container.appendChild(row);
+            }
+            if (Object.keys(boxItems).length === 0) document.getElementById('empty-msg').style.display = 'block';
+        }
+
+        // --- Step 3: Zebra ZPL Generator & Print ---
+        async function generateAndPrint() {
+            const orderNum = document.getElementById('display-order').innerText;
+            const desc = document.getElementById('display-desc').innerText;
+            const boxNum = document.getElementById('box-num').value;
+            const boxTotal = document.getElementById('box-total').value;
+            const url = webhookInput.value;
+
+            if (!orderNum) return alert("Please Lookup an order first.");
+            if (Object.keys(boxItems).length === 0) return alert("Add sizes to the box before printing.");
+
+            // Generate ZPL Code (Zebra Programming Language) matching your label design
+            let zpl = `^XA
+^FO50,50^A0N,40,40^FDOrder #: ${orderNum}^FS
+^FO50,110^A0N,30,30^FDDesc. : ${desc.substring(0, 45)}^FS
+^FO50,160^GB700,3,3^FS
+^FO50,180^A0N,30,30^FDContents:^FS`;
+
+            let yPos = 230;
+            for (const [size, qty] of Object.entries(boxItems)) {
+                if (qty > 0) {
+                    zpl += `^FO50,${yPos}^A0N,40,40^FD${size} - Qty: ${qty}^FS`;
+                    yPos += 50;
+                }
+            }
+
+            zpl += `
+^FO50,900^GB700,3,3^FS
+^FO450,950^A0N,30,30^FDBox Number ${boxNum} of ${boxTotal}^FS
+^XZ`;
+
+            const btn = document.getElementById('print-btn');
+            btn.innerText = "SENDING...";
+            btn.disabled = true;
+
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    body: JSON.stringify({ zpl: zpl }),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    mode: 'no-cors'
+                });
+                
+                btn.innerText = "SENT!";
+                btn.classList.remove('bg-green-600');
+                btn.classList.add('bg-blue-600');
+                
+                // Auto-increment box number for the next print
+                document.getElementById('box-num').value = parseInt(boxNum) + 1;
+                clearBox();
+                
+                setTimeout(() => {
+                    btn.innerText = "PRINT ZEBRA LABEL";
+                    btn.classList.remove('bg-blue-600');
+                    btn.classList.add('bg-green-600');
+                    btn.disabled = false;
+                }, 1500);
+
+            } catch (err) {
+                alert("Print signal failed to send.");
+                btn.innerText = "PRINT ZEBRA LABEL";
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
